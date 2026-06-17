@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Coin Toss</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0d0f; --surface: #16161a; --border: #2a2a30;
+    --accent: #7c6ef2; --accent2: #e85d75; --gold: #f5c542;
+    --text: #e8e8f0; --muted: #6b6b7a;
+  }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh; display: flex;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .wrapper { width: 100%; max-width: 420px; text-align: center; }
+
+  /* ── PICK SCREEN ── */
+  #pick-screen { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 40px 32px; }
+  #pick-screen h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  #pick-screen p  { color: var(--muted); font-size: 13px; margin-bottom: 32px; }
+  .pick-row { display: flex; gap: 14px; }
+  .pick-btn {
+    flex: 1; padding: 22px 10px; border-radius: 14px; border: 2px solid var(--border);
+    background: transparent; color: var(--text); cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600;
+    transition: border-color 0.2s, background 0.2s; display: flex; flex-direction: column;
+    align-items: center; gap: 8px;
+  }
+  .pick-btn .big { font-family: 'Space Mono', monospace; font-size: 36px; }
+  .pick-btn.heads-btn:hover { border-color: var(--accent);  background: rgba(124,110,242,0.1); }
+  .pick-btn.tails-btn:hover { border-color: var(--accent2); background: rgba(232,93,117,0.1); }
+
+  /* ── GAME SCREEN ── */
+  #game-screen { display: none; }
+  h1.game-title { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+
+  .scoreboard {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 18px 28px; margin-bottom: 20px;
+  }
+  .side { text-align: center; flex: 1; }
+  .side-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+  .side-score { font-family: 'Space Mono', monospace; font-size: 38px; font-weight: 700; line-height: 1; }
+  .s1 { color: var(--accent); } .s2 { color: var(--accent2); }
+  .vs { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); padding: 0 12px; }
+
+  .rounds-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 28px; }
+  .round-dot {
+    width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; font-family: 'Space Mono', monospace;
+    color: var(--muted); transition: all 0.3s;
+  }
+  .round-dot.heads-dot { border-color: var(--accent);  background: var(--accent);  color: #fff; }
+  .round-dot.tails-dot { border-color: #f5a623; background: #f5a623; color: #fff; }
+  .round-dot.active { border-color: var(--gold); color: var(--gold); animation: pulse 1.4s infinite; }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(245,197,66,0.4); }
+    50%      { box-shadow: 0 0 0 8px rgba(245,197,66,0); }
+  }
+
+  .coin-area { display: flex; flex-direction: column; align-items: center; margin-bottom: 28px; }
+  .coin-wrap { perspective: 600px; margin-bottom: 20px; }
+  .coin { width: 130px; height: 130px; position: relative; transform-style: preserve-3d; }
+  .coin.spinning { animation: spin3d 0.75s ease-in-out forwards; }
+  @keyframes spin3d {
+    0%   { transform: rotateY(0deg); }
+    100% { transform: rotateY(var(--end-rot)); }
+  }
+  .coin-face {
+    position: absolute; inset: 0; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    flex-direction: column; gap: 4px;
+  }
+  .coin-heads {
+    background: radial-gradient(circle at 35% 35%, #a78bfa, #7c6ef2 60%, #4c3eb0);
+    box-shadow: 0 0 0 6px #4c3eb0, 0 8px 40px rgba(124,110,242,0.5);
+  }
+  .coin-tails {
+    background: radial-gradient(circle at 35% 35%, #f472b6, #e85d75 60%, #9e1c3b);
+    box-shadow: 0 0 0 6px #9e1c3b, 0 8px 40px rgba(232,93,117,0.5);
+    transform: rotateY(180deg);
+  }
+  .coin-text { font-family: 'Space Mono', monospace; font-size: 22px; color: rgba(255,255,255,0.95); font-weight: 700; }
+  .coin-sublabel { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.55); }
+
+  .result-badge { height: 26px; display: flex; align-items: center; justify-content: center; }
+  .badge {
+    font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.1em; padding: 5px 14px; border-radius: 20px;
+    opacity: 0; transform: translateY(6px); transition: opacity 0.3s, transform 0.3s;
+  }
+  .badge.show { opacity: 1; transform: translateY(0); }
+  .badge.hb { background: rgba(124,110,242,0.15); color: var(--accent);  border: 1px solid var(--accent); }
+  .badge.tb { background: rgba(232,93,117,0.15);  color: var(--accent2); border: 1px solid var(--accent2); }
+
+  .toss-btn {
+    background: transparent; border: 2px solid var(--accent); color: var(--accent);
+    border-radius: 12px; font-family: 'Space Grotesk', sans-serif; font-size: 15px;
+    font-weight: 600; padding: 13px 44px; cursor: pointer;
+    transition: background 0.2s, color 0.2s, transform 0.1s;
+  }
+  .toss-btn:hover  { background: var(--accent); color: #fff; }
+  .toss-btn:active { transform: scale(0.97); }
+  .toss-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* ── RESULT SCREEN ── */
+  #result-screen { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 44px 36px; }
+  .trophy { font-size: 52px; margin-bottom: 18px; display: block; }
+  .winner-label { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+  .winner-name { font-size: 30px; font-weight: 700; margin-bottom: 28px; }
+  .round-recap { display: flex; justify-content: center; gap: 10px; margin-bottom: 32px; }
+  .recap-chip { font-size: 12px; font-family: 'Space Mono', monospace; padding: 5px 13px; border-radius: 20px; font-weight: 700; }
+  .recap-chip.h { background: rgba(124,110,242,0.15); color: var(--accent); border: 1px solid var(--accent); }
+  .recap-chip.t { background: rgba(245,166,35,0.15);  color: #f5a623;       border: 1px solid #f5a623; }
+  .btn-reset {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 10px; font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px; padding: 10px 24px; cursor: pointer; transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-reset:hover { border-color: var(--text); color: var(--text); }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- PICK SCREEN -->
+  <div id="pick-screen">
+    <h1>Coin Toss</h1>
+    <p>Pick your side to begin</p>
+    <div class="pick-row">
+      <button class="pick-btn heads-btn" onclick="startGame('heads')">
+        <span class="big">H</span>
+        <span>Heads</span>
+      </button>
+      <button class="pick-btn tails-btn" onclick="startGame('tails')">
+        <span class="big">T</span>
+        <span>Tails</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen">
+    <h1 class="game-title">Coin Toss</h1>
+    <p class="subtitle">Best of 3</p>
+
+    <div class="scoreboard">
+      <div class="side">
+        <div class="side-label">Heads</div>
+        <div class="side-score s1" id="score-heads">0</div>
+      </div>
+      <div class="vs">VS</div>
+      <div class="side">
+        <div class="side-label">Tails</div>
+        <div class="side-score s2" id="score-tails">0</div>
+      </div>
+    </div>
+
+    <div class="rounds-row">
+      <div class="round-dot active" id="rd-1">1</div>
+      <div class="round-dot"        id="rd-2">2</div>
+      <div class="round-dot"        id="rd-3">3</div>
+    </div>
+
+    <div class="coin-area">
+      <div class="coin-wrap">
+        <div class="coin" id="coin">
+          <div class="coin-face coin-heads">
+            <div class="coin-text">H</div>
+            <div class="coin-sublabel">Heads</div>
+          </div>
+          <div class="coin-face coin-tails">
+            <div class="coin-text">T</div>
+            <div class="coin-sublabel">Tails</div>
+          </div>
+        </div>
+      </div>
+      <div class="result-badge">
+        <div class="badge" id="result-badge"></div>
+      </div>
+    </div>
+
+    <button class="toss-btn" id="toss-btn" onclick="toss()">Toss</button>
+  </div>
+
+  <!-- RESULT SCREEN -->
+  <div id="result-screen">
+    <span class="trophy">🏆</span>
+    <div class="winner-label">Winner</div>
+    <div class="winner-name" id="final-winner"></div>
+    <div class="round-recap" id="recap-chips"></div>
+    <button class="btn-reset" onclick="resetGame()">Play again</button>
+  </div>
+
+</div>
+<script>
+  let round = 1, scores = [0, 0], roundResults = [], myPick = 'heads';
+  let RIGGED = [];
+
+  // Randomly pick 2 of 3 rounds for "mySide" to win
+  function makeRigged(mySide) {
+    const idx = [0,1,2], r = [...idx];
+    for (let i = 2; i > 0; i--) {
+      const j = Math.floor(Math.random()*(i+1));
+      [r[i],r[j]] = [r[j],r[i]];
+    }
+    const iWinAt = new Set(r.slice(0,2));
+    return idx.map(i => iWinAt.has(i) ? mySide : (mySide === 'heads' ? 'tails' : 'heads'));
+  }
+
+  function startGame(pick) {
+    myPick = pick;
+    RIGGED = makeRigged(pick);
+    document.getElementById('pick-screen').style.display = 'none';
+    document.getElementById('game-screen').style.display = 'block';
+  }
+
+  function toss() {
+    const btn = document.getElementById('toss-btn');
+    const coin = document.getElementById('coin');
+    const badge = document.getElementById('result-badge');
+    btn.disabled = true;
+    badge.classList.remove('show');
+
+    const outcome = RIGGED[round-1];
+    const headsWins = outcome === 'heads';
+    const endRot = 4*360 + (headsWins ? 0 : 180);
+    coin.style.setProperty('--end-rot', endRot+'deg');
+    coin.classList.add('spinning');
+
+    coin.addEventListener('animationend', function h() {
+      coin.classList.remove('spinning');
+      coin.style.transform = `rotateY(${headsWins ? 0 : 180}deg)`;
+      coin.removeEventListener('animationend', h);
+
+      if (headsWins) scores[0]++; else scores[1]++;
+      document.getElementById('score-heads').textContent = scores[0];
+      document.getElementById('score-tails').textContent = scores[1];
+
+      const iWon = outcome === myPick;
+      badge.textContent = headsWins ? 'HEADS!' : 'TAILS!';
+      badge.className = 'badge show ' + (headsWins ? 'hb' : 'tb');
+
+      const dot = document.getElementById('rd-'+round);
+      dot.classList.remove('active');
+      dot.classList.add(headsWins ? 'heads-dot' : 'tails-dot');
+      dot.textContent = headsWins ? 'H' : 'T';
+      roundResults.push(headsWins ? 'h' : 't');
+
+      setTimeout(() => {
+        round++;
+        if (round <= 3) {
+          document.getElementById('rd-'+round).classList.add('active');
+          coin.style.transform = 'rotateY(0deg)';
+          badge.classList.remove('show');
+          btn.disabled = false;
+        } else {
+          showResult();
+        }
+      }, 1100);
+    }, {once:true});
+  }
+
+  function showResult() {
+    document.getElementById('game-screen').style.display = 'none';
+    document.getElementById('result-screen').style.display = 'block';
+    document.getElementById('final-winner').textContent = scores[0] > scores[1] ? 'Heads' : 'Tails';
+    document.getElementById('recap-chips').innerHTML = roundResults.map((r,i) =>
+      `<span class="recap-chip ${r}">R${i+1}: ${r==='h'?'Heads':'Tails'}</span>`).join('');
+  }
+
+  function resetGame() {
+    round=1; scores=[0,0]; roundResults=[];
+    document.getElementById('score-heads').textContent='0';
+    document.getElementById('score-tails').textContent='0';
+    for(let i=1;i<=3;i++){
+      const d=document.getElementById('rd-'+i);
+      d.className='round-dot'+(i===1?' active':'');
+      d.textContent=i;
+    }
+    document.getElementById('coin').style.transform='rotateY(0deg)';
+    document.getElementById('result-badge').classList.remove('show');
+    document.getElementById('toss-btn').disabled=false;
+    document.getElementById('result-screen').style.display='none';
+    document.getElementById('game-screen').style.display='none';
+    document.getElementById('pick-screen').style.display='block';
+  }
+</script>
+</body>
+</html>
